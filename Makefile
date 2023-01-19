@@ -14,6 +14,6 @@ build:
 	xk6 build --with github.com/szkiba/xk6-yaml
 
 run:
-	./k6 run ./scripts/start.js -e BASE_URL=$(BASE_URL) -e USERNAME=$(USERNAME) -e PASSWORD=$(PASSWORD)
+	./k6 run ./src/start.js -e BASE_URL=$(BASE_URL) -e USERNAME=$(USERNAME) -e PASSWORD=$(PASSWORD)
 
 .PHONY: help install-xk6 build run

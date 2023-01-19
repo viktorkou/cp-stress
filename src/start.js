@@ -1,8 +1,8 @@
 import http from 'k6/http';
-import { check } from 'k6';
-import { uuidv4, getRandomInt } from './utils.js';
+import { chooseRandomClusterInfo } from './utils.js';
 import { getClusterSyncAppToken, getUserId, login } from './auth.js';
-import { createProjectObject, createJobObject } from './models.js';
+import { createJob, createCluster, createProject } from './requests/post.js';
+import { getJobs, getAudit, getJobsCount } from './requests/get.js';
 
 
 const STRESS_LEVEL_FACTOR = 20
@@ -21,15 +21,15 @@ export const options = {
   scenarios: {
     createJobsPreload: {
       executor: 'shared-iterations',
-      exec: 'createJobHelper',
-      vus: 10*STRESS_LEVEL_FACTOR,
-      iterations: 100*STRESS_LEVEL_FACTOR,
+      exec: 'createJobHelperVU',
+      vus: 1,
+      iterations: 1,
       maxDuration: `${SETUP_SCEARIOS_DURATION_SECONDS}s`,
     },
     getJobs: {
       startTime: `${SETUP_SCEARIOS_DURATION_SECONDS}s`,
       executor: 'constant-arrival-rate',
-      exec: 'getJobs',
+      exec: 'getJobsVU',
       duration: `${TEST_SCEARIOS_DURATION_SECONDS}s`,
       rate: 20*STRESS_LEVEL_FACTOR,
       // It should start `rate` iterations per second
@@ -40,7 +40,7 @@ export const options = {
     audit: {
       startTime: `${SETUP_SCEARIOS_DURATION_SECONDS}s`,
       executor: 'constant-arrival-rate',
-      exec: 'audit',
+      exec: 'auditVU',
       duration: `${TEST_SCEARIOS_DURATION_SECONDS}s`,
       rate: 10*STRESS_LEVEL_FACTOR,
       timeUnit: '1s',
@@ -50,7 +50,7 @@ export const options = {
     createJob: {
       startTime: `${SETUP_SCEARIOS_DURATION_SECONDS}s`,
       executor: 'constant-arrival-rate',
-      exec: 'createJob',
+      exec: 'createJobVU',
       duration: `${TEST_SCEARIOS_DURATION_SECONDS}s`,
       rate: 1*STRESS_LEVEL_FACTOR,
       timeUnit: '1s',
@@ -103,50 +103,32 @@ export function teardown(data) {
 // ==================== TEST VIRTUAL USER FUNCTIONS ====================
 
 // VU code
-export function getJobs(data) {
-  const clusterInfo = getRandomClusterInfo(data['clusters']);
-  let res = http.get(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}/jobs?filter=&sortBy=status&sortDirection=asc&from=0&limit=20`, {headers: {'Authorization': data['token']}})
-  check(res, {
-    "status code should be 200": res => res.status === 200,
-  });
+export function getJobsVU(data) {
+  const clusterInfo = chooseRandomClusterInfo(data['clusters']);
+  getJobs(clusterInfo.clusterId, data['token']);
 }
 
 // VU code
-export function audit(data) {
-  let res = http.get(`${__ENV.BASE_URL}/v1/k8s/audit?offset=0&limit=10000&start=2023-01-04T00:00:00&end=2023-01-11T23:59:59`, {headers: {'Authorization': data['token']}})
-  check(res, {
-    "status code should be 200": res => res.status === 200,
-  });
+export function auditVU(data) {
+  getAudit(data['token'])
 }
 
 // VU code
-export function createJob(data)  {
-  const clusterInfo = getRandomClusterInfo(data['clusters']);
-  const job = createJobObject(clusterInfo.clusterId, clusterInfo.project);
-  http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}/podGroups`, JSON.stringify([job]), {headers: {'Authorization': clusterInfo.appBearerToken, 'Content-Type': 'application/json'}});
+export function createJobVU(data)  {
+  const clusterInfo = chooseRandomClusterInfo(data['clusters']);
+  createJob(clusterInfo.clusterId, clusterInfo.project, clusterInfo.appBearerToken);
 }
 
 // ==================== HELPER VIRTUAL USER FUNCTIONS ====================
 
 // VU code
-export function createJobHelper(data)  {
-  const clusterInfo = getRandomClusterInfo(data['clusters']);
-  const job = createJobObject(clusterInfo.clusterId, clusterInfo.project);
-  http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}/podGroups`, JSON.stringify([job]), {headers: {'Authorization': clusterInfo.appBearerToken, 'Content-Type': 'application/json'}});
+export function createJobHelperVU(data)  {
+  const clusterInfo = chooseRandomClusterInfo(data['clusters']);
+  createJob(clusterInfo.clusterId, clusterInfo.project, clusterInfo.appBearerToken);
 }
 
 
 // ==================== HELPER FUNCTIONS ====================
-
-export function createCluster(token) {
-  const res = http.post(`${__ENV.BASE_URL}/v1/k8s/clusters`, JSON.stringify({"name": `stress-test-cluster-${uuidv4()}`}), {headers: {'Authorization': token, 'Content-Type': 'application/json'}})
-  return res.json();
-}
-
-export function createProject(userId, clusterId, nodePoolId, token) {
-  const res = http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterId}/projects`, JSON.stringify(createProjectObject(userId, clusterId, nodePoolId)), {headers: {'Authorization': token, 'Content-Type': 'application/json'}})
-  return res.json();
-}
 
 
 
@@ -155,9 +137,5 @@ function getDefaultNodePoolId(clusterId, token) {
   return res.json()[0]['id'];
 }
 
-function getRandomClusterInfo(clusters) {
-  const cluster = clusters[getRandomInt(clusters.length)];
-  const project = cluster.projects[getRandomInt(cluster.projects.length)];
-  return {clusterId: cluster['clusterId'], appBearerToken: cluster['appBearerToken'], project: project};
-}
+
 
