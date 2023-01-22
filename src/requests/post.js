@@ -7,6 +7,10 @@ export function createJob(clusterId, project, bearerToken) {
     http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterId}/podGroups`, JSON.stringify([job]), {headers: {'Authorization': bearerToken, 'Content-Type': 'application/json'}});
 }
 
+export function syncJobs(clusterId, bearerToken, jobs) {
+    http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterId}/podGroups/sync`, JSON.stringify([jobs]), {headers: {'Authorization': bearerToken, 'Content-Type': 'application/json'}});
+}
+
 export function createCluster(bearerToken) {
     const res = http.post(`${__ENV.BASE_URL}/v1/k8s/clusters`, JSON.stringify({"name": `stress-test-cluster-${uuidv4()}`}), {headers: {'Authorization': bearerToken, 'Content-Type': 'application/json'}})
     return res.json();

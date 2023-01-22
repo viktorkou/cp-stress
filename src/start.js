@@ -1,8 +1,10 @@
 import http from 'k6/http';
 import { chooseRandomClusterInfo } from './utils.js';
 import { getClusterSyncAppToken, getUserId, login } from './auth.js';
-import { createJob, createCluster, createProject } from './requests/post.js';
+import { createJob, syncJobs, createCluster, createProject } from './requests/post.js';
 import { getJobs, getAudit, getJobsCount } from './requests/get.js';
+import { deleteJob, deleteCluster } from './requests/delete.js';
+import { createJobObject } from './models.js';
 
 
 const STRESS_LEVEL_FACTOR = 20
@@ -88,14 +90,14 @@ export function setup() {
 
 export function teardown(data) {
   for(let clusterInfo of data.clusters) {
-    let mockJob = createJobObject(clusterInfo.clusterId, clusterInfo.project);
+    let job = createJobObject(clusterInfo.clusterId, clusterInfo.project);
     // This is a dirty way to delete all jobs except the mock job
-    http.post(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}/podGroups/sync`, JSON.stringify([mockJob]), {headers: {'Authorization': clusterInfo.appBearerToken, 'Content-Type': 'application/json'}});
+    syncJobs(clusterInfo.clusterId, clusterInfo.appBearerToken, [job]);
     // delete the mock job we created
-    http.del(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}/podGroups/${mockJob.podGroupId}`, {}, {headers: {'Authorization': clusterInfo.appBearerToken, 'Content-Type': 'application/json'}});
+    deleteJob(clusterInfo.clusterId, clusterInfo.appBearerToken, job.podGroupId)
 
     // Delete the cluster
-    http.del(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterInfo.clusterId}`, JSON.stringify({"uuid": clusterInfo.clusterId}), {headers: {'Authorization': data['token'], 'Content-Type': 'application/json'}});
+    deleteCluster(clusterInfo.clusterId, data.token);
   }
 }
 
