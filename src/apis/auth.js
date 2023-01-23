@@ -3,7 +3,6 @@ import http from 'k6/http';
 
 export function getClusterSyncAppToken(clusterId, token){
     const clientRes = http.get(`${__ENV.BASE_URL}/v1/k8s/clusters/${clusterId}/installfile?cloud=op`, {headers: {'Authorization': token}});
-    console.log(clientRes.body)
     const yamlClientRes = parse(clientRes.body);
     const clientId = yamlClientRes['runai-operator']['config']['cluster-sync']['clientId'];
     const clientSecret = yamlClientRes['runai-operator']['config']['cluster-sync']['clientSecret'];
@@ -22,8 +21,7 @@ export function login(username, password) {
     const realm = getTenantConfig()['authRealm'];
     const data = {grant_type: 'password', username: username, password: password, client_id: 'runai-cli'}
     const res = http.post(`${getKeycloakUrl()}/realms/${realm}/protocol/openid-connect/token`, data, {headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
-    console.log(res.data)
-    console.log(res.status)
+
     return `Bearer ${res.json()['access_token']}`;
 }
 

@@ -4,6 +4,10 @@ export function uuidv4() {
       return v.toString(16);
     });
 }
+
+export function generateShortUuid() {
+  return uuidv4().split('-').pop();
+}
   
   export function getRandomInt(max) {
     return Math.floor(Math.random() * max);

@@ -1,9 +1,9 @@
 import { uuidv4 } from './utils.js';
 
-export function createProjectObject(userId, clusterId, nodePoolId) {
+export function createProjectObject(userId, clusterId, nodePoolId, namePrefix = 'stress-test-project') {
     const id = uuidv4();
     return {
-      "name": `stress-test-project-${id}`,
+      "name": `${namePrefix}-${id}`,
       "departmentId": 1,
       "deservedGpus": 1,
       "clusterUuid": clusterId,
@@ -74,15 +74,15 @@ export function createProjectObject(userId, clusterId, nodePoolId) {
     }
   }
   
-export function createJobObject(clusterId, project) {
+export function createJobObject(clusterId, project, namePrefix = 'stress-test-job') {
     const id = uuidv4();
     return {
       "jobId": id,
       "podGroupId": id,
       "podGroupUuid": id,
       "existsInCluster": true,
-      "podGroupName": `stress-${id}`,
-      "workloadName": `stress-${id}`,
+      "podGroupName": `${namePrefix}-${id}`,
+      "workloadName": `${namePrefix}-${id}`,
       "workloadType": "Train",
       "clusterUuid": clusterId,
       "podGroupPhase": "Running",
@@ -93,6 +93,28 @@ export function createJobObject(clusterId, project) {
       "created": `${Date.now()}`,
       "nodePool": "default",
       "workloadKind": "RunaiJob",
-      "parentWorkloadName": `stress-${id}-parent`,
+      "parentWorkloadName": `${namePrefix}-${id}-parent`,
     }
+}
+
+export function createPodObject(clusterId, jobId, namePrefix = 'stress-test-pod') {
+  const id = uuidv4();
+  return {
+    "podId": id,
+    "podUuid": id,
+    "jobId": jobId,
+    "podGroupId": jobId,
+    "imageName": "placeholder",
+    "status": "Running",
+    "phase": "Running",
+    "podGroupUuid": jobId,
+    "existsInCluster": true,
+    "podName": `${namePrefix}-${id}`,
+    "name": `${namePrefix}-${id}`,
+    "clusterUuid": clusterId,
+    "workloadUser": "placeholder",
+    "nodeId": "placeholder",
+    "created": `${Date.now()}`,
+    "nodePool": "default",
+  }
 }
